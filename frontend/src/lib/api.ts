@@ -1,4 +1,4 @@
-import type { Candle, Pattern, PatternStatus, StrategyConfig, SystemConfig } from "../types/api";
+import type { Candle, Pattern, PatternStatus, StrategyConfig, StrategyPerformance, SystemConfig } from "../types/api";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -24,6 +24,12 @@ export const api = {
   getStrategy: () => request<StrategyConfig>("/api/strategy"),
   updateStrategy: (payload: Omit<StrategyConfig, "id">) =>
     request<StrategyConfig>("/api/strategy", { method: "PUT", body: JSON.stringify(payload) }),
+  getStrategies: () => request<StrategyConfig[]>("/api/strategies"),
+  createStrategy: (payload: Omit<StrategyConfig, "id">) =>
+    request<StrategyConfig>("/api/strategies", { method: "POST", body: JSON.stringify(payload) }),
+  activateStrategy: (id: number) => request<StrategyConfig>(`/api/strategies/${id}/activate`, { method: "POST" }),
+  replayStrategy: (id: number) => request<StrategyPerformance>(`/api/strategies/${id}/replay`, { method: "POST" }),
+  getStrategyPerformance: () => request<StrategyPerformance[]>("/api/strategy-performance"),
   getPatterns: (status?: PatternStatus) =>
     request<Pattern[]>(`/api/patterns${status ? `?status=${status}` : ""}`),
   getCandles: (symbol: string, timeframe = "15m") =>

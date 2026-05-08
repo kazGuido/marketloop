@@ -9,6 +9,7 @@ from app.models.enums import TradeStatus
 class TradeRead(BaseModel):
     id: UUID
     pattern_id: UUID
+    strategy_config_id: int | None
     entry_price: float
     stop_loss: float
     take_profit_1: float

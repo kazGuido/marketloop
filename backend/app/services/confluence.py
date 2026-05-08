@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import time
 from typing import Any
 
 from app.models import Pattern, StrategyConfig
@@ -26,6 +27,9 @@ class ConfluenceResult:
     funding_rate: float | None
     atr_pct: float
     net_reward_risk: float
+    live_price: float
+    observed_time: int
+    components: dict[str, bool]
 
     def as_details(self) -> dict[str, Any]:
         return {
@@ -40,6 +44,9 @@ class ConfluenceResult:
             "funding_rate": self.funding_rate,
             "atr_pct": self.atr_pct,
             "net_reward_risk": self.net_reward_risk,
+            "live_price": self.live_price,
+            "observed_time": self.observed_time,
+            "components": self.components,
         }
 
 
@@ -54,6 +61,16 @@ async def score_pattern(
     score = strategy.base_weight
     reasons = [f"Base harmonic match: +{strategy.base_weight}"]
     reject_reasons: list[str] = []
+    components = {
+        "base": True,
+        "oi": False,
+        "orderbook": False,
+        "rsi": False,
+        "volatility": False,
+        "trend": False,
+        "funding": False,
+        "orderflow_persistence": False,
+    }
 
     open_interest = _float_or_none(asset_context.get("openInterest") or asset_context.get("oi"))
     funding_rate = _float_or_none(asset_context.get("funding") or asset_context.get("fundingRate"))
@@ -62,6 +79,7 @@ async def score_pattern(
     if open_interest is not None:
         await redis_cache.set_json(oi_key, open_interest, ex=60 * 60 * 6)
     if _oi_confirms(pattern.direction, open_interest, previous_oi_raw):
+        components["oi"] = True
         score += strategy.oi_weight
         reasons.append(f"Open interest positioning confirms reversal: +{strategy.oi_weight}")
 
@@ -72,17 +90,20 @@ async def score_pattern(
     else:
         book_confirms = bid_depth > 0 and ask_depth > bid_depth * strategy.orderbook_imbalance_ratio
     if book_confirms:
+        components["orderbook"] = True
         score += strategy.orderbook_weight
         reasons.append(f"Orderbook imbalance confirms reversal side: +{strategy.orderbook_weight}")
 
     candles = normalize_candles(raw_candles)
     if rsi_divergence(candles, pattern.direction):
+        components["rsi"] = True
         score += strategy.rsi_weight
         reasons.append(f"15m RSI divergence confirms reversal: +{strategy.rsi_weight}")
 
     current_atr_pct = atr_pct(candles)
     volatility_ok = strategy.min_atr_pct <= current_atr_pct <= strategy.max_atr_pct
     if volatility_ok:
+        components["volatility"] = True
         score += strategy.volatility_weight
         reasons.append(f"ATR regime tradable ({current_atr_pct:.3%}): +{strategy.volatility_weight}")
     else:
@@ -92,6 +113,7 @@ async def score_pattern(
 
     trend_ok = avoids_hard_countertrend(candles, pattern.direction)
     if trend_ok:
+        components["trend"] = True
         score += strategy.trend_weight
         reasons.append(f"Not fighting a hard EMA trend: +{strategy.trend_weight}")
     else:
@@ -99,6 +121,7 @@ async def score_pattern(
 
     funding_ok = _funding_ok(pattern.direction, funding_rate, strategy.max_abs_funding_rate)
     if funding_ok:
+        components["funding"] = True
         score += strategy.funding_weight
         reasons.append(f"Funding is not meaningfully adverse: +{strategy.funding_weight}")
     else:
@@ -106,6 +129,7 @@ async def score_pattern(
 
     persistent = await _orderflow_persistent(pattern, imbalance_ratio, strategy)
     if persistent:
+        components["orderflow_persistence"] = True
         score += strategy.orderflow_persistence_weight
         reasons.append(f"Orderflow imbalance persisted across snapshots: +{strategy.orderflow_persistence_weight}")
     else:
@@ -131,6 +155,9 @@ async def score_pattern(
         funding_rate=funding_rate,
         atr_pct=current_atr_pct,
         net_reward_risk=rr,
+        live_price=live_price,
+        observed_time=int(time.time()),
+        components=components,
     )
 
 

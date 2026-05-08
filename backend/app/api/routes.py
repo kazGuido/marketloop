@@ -7,16 +7,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import get_session
-from app.models import Pattern, Trade
+from app.models import Pattern, StrategyConfig, Trade
 from app.models.enums import OperationMode, PatternStatus, TradeStatus
 from app.schemas.config import SystemConfigRead, SystemConfigUpdate
 from app.schemas.pattern import CandleRead, PatternRead
-from app.schemas.strategy import StrategyConfigRead, StrategyConfigUpdate
+from app.schemas.strategy import (
+    StrategyConfigCreate,
+    StrategyConfigRead,
+    StrategyConfigUpdate,
+    StrategyPerformanceRead,
+    StrategyReplayRead,
+)
 from app.schemas.trade import TradeRead
 from app.services.config_service import get_system_config, update_system_config
 from app.services.hyperliquid_client import HyperliquidPrivateClient, HyperliquidPublicClient
 from app.services.redis_cache import redis_cache
-from app.services.strategy_service import get_strategy_config, update_strategy_config
+from app.services.strategy_performance import evaluate_strategy_replay, latest_performance_snapshots
+from app.services.strategy_service import (
+    activate_strategy_config,
+    create_strategy_config,
+    get_strategy_config,
+    list_strategy_configs,
+    update_strategy_config,
+)
 from app.services.technical import normalize_candles
 
 router = APIRouter()
@@ -46,6 +59,51 @@ async def read_strategy(session: SessionDep):
 @router.put("/api/strategy", response_model=StrategyConfigRead)
 async def write_strategy(payload: StrategyConfigUpdate, session: SessionDep):
     return await update_strategy_config(session, payload)
+
+
+@router.get("/api/strategies", response_model=list[StrategyConfigRead])
+async def list_strategies(session: SessionDep, include_archived: bool = Query(default=False)):
+    return await list_strategy_configs(session, include_archived=include_archived)
+
+
+@router.post("/api/strategies", response_model=StrategyConfigRead)
+async def create_strategy(payload: StrategyConfigCreate, session: SessionDep):
+    return await create_strategy_config(session, payload)
+
+
+@router.post("/api/strategies/{strategy_id}/activate", response_model=StrategyConfigRead)
+async def activate_strategy(strategy_id: int, session: SessionDep):
+    try:
+        return await activate_strategy_config(session, strategy_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/api/strategies/{strategy_id}/replay", response_model=StrategyReplayRead)
+async def replay_strategy(strategy_id: int, session: SessionDep):
+    strategy = await session.get(StrategyConfig, strategy_id)
+    if strategy is None:
+        raise HTTPException(status_code=404, detail="Strategy not found")
+    metrics = await evaluate_strategy_replay(session, strategy)
+    return StrategyReplayRead(**metrics.__dict__)
+
+
+@router.get("/api/strategy-performance", response_model=list[StrategyPerformanceRead])
+async def strategy_performance(session: SessionDep):
+    snapshots = await latest_performance_snapshots(session)
+    return [
+        StrategyPerformanceRead(
+            strategy_config_id=snapshot.strategy_config_id,
+            sample_size=snapshot.sample_size,
+            win_rate=snapshot.win_rate,
+            profit_factor=snapshot.profit_factor,
+            expectancy_r=snapshot.expectancy_r,
+            max_drawdown_r=snapshot.max_drawdown_r,
+            degraded=snapshot.degraded,
+            metrics=snapshot.metrics,
+        )
+        for snapshot in snapshots
+    ]
 
 
 @router.get("/api/patterns", response_model=list[PatternRead])

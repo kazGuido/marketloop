@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Enum, Float, Integer, String, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,7 @@ class Pattern(Base):
     pattern_type: Mapped[str] = mapped_column(String(80), nullable=False)
     direction: Mapped[PatternDirection] = mapped_column(Enum(PatternDirection), nullable=False)
     timeframe: Mapped[str] = mapped_column(String(16), nullable=False, default="15m")
+    strategy_config_id: Mapped[int | None] = mapped_column(ForeignKey("strategy_configs.id"), nullable=True, index=True)
     coords: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     prz_upper: Mapped[float] = mapped_column(Float, nullable=False)
     prz_lower: Mapped[float] = mapped_column(Float, nullable=False)

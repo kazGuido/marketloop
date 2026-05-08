@@ -30,6 +30,7 @@ async def open_trade_for_pattern(
 
     trade = Trade(
         pattern_id=pattern.id,
+        strategy_config_id=pattern.strategy_config_id,
         hyperliquid_order_id=order_id,
         entry_price=entry_price,
         stop_loss=stop_loss,

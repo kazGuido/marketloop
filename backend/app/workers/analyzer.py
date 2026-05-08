@@ -20,8 +20,9 @@ from app.services.technical import (
     detect_gartley_projections,
     normalize_candles,
 )
-from app.services.telegram import send_pattern_alert
-from app.services.strategy_service import get_strategy_config
+from app.services.strategy_performance import persist_strategy_performance
+from app.services.telegram import send_pattern_alert, send_strategy_degradation_alert
+from app.services.strategy_service import get_strategy_config, list_strategy_configs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("analyzer")
@@ -85,6 +86,7 @@ async def confluence_loop(client: HyperliquidPublicClient) -> None:
                     )
                     confluence = await score_pattern(pattern, live_price, book, context, raw_candles, strategy)
                     await persist_confluence_snapshots(session, pattern, live_price, book, context, confluence)
+                    pattern.strategy_config_id = strategy.id
                     pattern.confluence_score = confluence.score
                     pattern.confluence_details = confluence.as_details()
                     await session.commit()
@@ -144,6 +146,30 @@ async def risk_manager_loop(client: HyperliquidPublicClient) -> None:
         await asyncio.sleep(settings.risk_interval_seconds)
 
 
+async def strategy_monitor_loop() -> None:
+    settings = get_settings()
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                for strategy in await list_strategy_configs(session):
+                    snapshot = await persist_strategy_performance(session, strategy)
+                    logger.info(
+                        "Strategy %s performance sample=%s pf=%.2f exp=%.2f degraded=%s",
+                        strategy.name,
+                        snapshot.sample_size,
+                        snapshot.profit_factor,
+                        snapshot.expectancy_r,
+                        snapshot.degraded,
+                    )
+                    alert_key = f"strategy_degraded_alert:{strategy.id}:{snapshot.sample_size}:{round(snapshot.expectancy_r, 2)}"
+                    if strategy.notify_on_degradation and snapshot.degraded and not await redis_cache.get_json(alert_key):
+                        await send_strategy_degradation_alert(strategy, snapshot)
+                        await redis_cache.set_json(alert_key, True, ex=60 * 60 * 12)
+        except Exception:
+            logger.exception("Strategy monitor cycle failed")
+        await asyncio.sleep(settings.strategy_monitor_interval_seconds)
+
+
 async def _live_price(client: HyperliquidPublicClient, symbol: str) -> float:
     cached = await redis_cache.get_json(f"price:{symbol}")
     if cached is not None:
@@ -183,7 +209,7 @@ async def run() -> None:
         await ensure_default_strategy_config(session)
     client = HyperliquidPublicClient()
     try:
-        await asyncio.gather(scanner_loop(client), confluence_loop(client), risk_manager_loop(client))
+        await asyncio.gather(scanner_loop(client), confluence_loop(client), risk_manager_loop(client), strategy_monitor_loop())
     finally:
         await client.close()
         await redis_cache.close()

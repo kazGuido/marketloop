@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     scanner_interval_seconds: int = 60
     confluence_interval_seconds: int = 10
     risk_interval_seconds: int = 15
+    strategy_monitor_interval_seconds: int = 300
     max_assets_per_cycle: int = 25
 
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])

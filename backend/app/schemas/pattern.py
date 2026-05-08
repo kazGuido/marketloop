@@ -13,6 +13,7 @@ class PatternRead(BaseModel):
     pattern_type: str
     direction: PatternDirection
     timeframe: str
+    strategy_config_id: int | None
     coords: dict[str, Any]
     prz_upper: float
     prz_lower: float

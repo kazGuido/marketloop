@@ -1,18 +1,32 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import { api } from "../lib/api";
-import type { OperationMode, StrategyConfig, SystemConfig } from "../types/api";
+import type { OperationMode, StrategyConfig, StrategyPerformance, SystemConfig } from "../types/api";
 
 interface HeaderProps {
   config: SystemConfig | null;
   strategy: StrategyConfig | null;
+  strategies: StrategyConfig[];
+  performance: StrategyPerformance[];
   onConfigChange: (config: SystemConfig) => void;
   onStrategyChange: (strategy: StrategyConfig) => void;
+  onStrategiesChange: (strategies: StrategyConfig[]) => void;
+  onPerformanceChange: (performance: StrategyPerformance[]) => void;
 }
 
-export function Header({ config, strategy, onConfigChange, onStrategyChange }: HeaderProps) {
+export function Header({
+  config,
+  strategy,
+  strategies,
+  performance,
+  onConfigChange,
+  onStrategyChange,
+  onStrategiesChange,
+  onPerformanceChange
+}: HeaderProps) {
   const [assetPool, setAssetPool] = useState("BTC,ETH,SOL");
   const [risk, setRisk] = useState(1.5);
+  const [strategyName, setStrategyName] = useState("rent-and-utilities");
   const [scoreThreshold, setScoreThreshold] = useState(80);
   const [minRewardRisk, setMinRewardRisk] = useState(1.2);
   const [maxAtrPct, setMaxAtrPct] = useState(3.5);
@@ -28,6 +42,7 @@ export function Header({ config, strategy, onConfigChange, onStrategyChange }: H
 
   useEffect(() => {
     if (strategy) {
+      setStrategyName(strategy.name);
       setScoreThreshold(strategy.score_threshold);
       setMinRewardRisk(strategy.min_net_reward_risk);
       setMaxAtrPct(strategy.max_atr_pct * 100);
@@ -60,12 +75,49 @@ export function Header({ config, strategy, onConfigChange, onStrategyChange }: H
     if (!strategy) return;
     const updated = await api.updateStrategy({
       ...strategy,
+      name: strategyName,
       score_threshold: scoreThreshold,
       min_net_reward_risk: minRewardRisk,
       max_atr_pct: maxAtrPct / 100,
       orderbook_imbalance_ratio: imbalanceRatio
     });
     onStrategyChange(updated);
+  }
+
+  async function refreshStrategies() {
+    const [nextStrategies, nextPerformance] = await Promise.all([
+      api.getStrategies(),
+      api.getStrategyPerformance().catch(() => [] as StrategyPerformance[])
+    ]);
+    onStrategiesChange(nextStrategies);
+    onPerformanceChange(nextPerformance);
+  }
+
+  async function activateStrategy(id: number) {
+    const updated = await api.activateStrategy(id);
+    onStrategyChange(updated);
+    await refreshStrategies();
+  }
+
+  async function saveAsNewStrategy() {
+    if (!strategy) return;
+    const created = await api.createStrategy({
+      ...strategy,
+      name: `${strategyName} copy`,
+      active: false,
+      score_threshold: scoreThreshold,
+      min_net_reward_risk: minRewardRisk,
+      max_atr_pct: maxAtrPct / 100,
+      orderbook_imbalance_ratio: imbalanceRatio
+    });
+    onStrategyChange(created);
+    await refreshStrategies();
+  }
+
+  async function replayActiveStrategy() {
+    if (!strategy) return;
+    const result = await api.replayStrategy(strategy.id);
+    onPerformanceChange([result, ...performance.filter((item) => item.strategy_config_id !== strategy.id)]);
   }
 
   async function panic() {
@@ -98,6 +150,31 @@ export function Header({ config, strategy, onConfigChange, onStrategyChange }: H
               </button>
             ))}
           </div>
+
+          <label className="text-sm text-slate-300">
+            Strategy
+            <select
+              value={strategy?.id ?? ""}
+              onChange={(event) => activateStrategy(Number(event.target.value))}
+              className="mt-1 block w-48 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+            >
+              {strategies.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.active ? "* " : ""}
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-sm text-slate-300">
+            Strategy Name
+            <input
+              value={strategyName}
+              onChange={(event) => setStrategyName(event.target.value)}
+              className="mt-1 block w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+            />
+          </label>
 
           <label className="text-sm text-slate-300">
             Asset Pool
@@ -182,6 +259,20 @@ export function Header({ config, strategy, onConfigChange, onStrategyChange }: H
           </button>
           <button
             type="button"
+            onClick={saveAsNewStrategy}
+            className="rounded-lg bg-slate-800 px-4 py-2 font-semibold text-slate-100 hover:bg-slate-700"
+          >
+            Save Strategy
+          </button>
+          <button
+            type="button"
+            onClick={replayActiveStrategy}
+            className="rounded-lg bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400"
+          >
+            Replay
+          </button>
+          <button
+            type="button"
             onClick={panic}
             className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white shadow-lg shadow-red-950/40 hover:bg-red-500"
           >
@@ -189,6 +280,24 @@ export function Header({ config, strategy, onConfigChange, onStrategyChange }: H
           </button>
         </form>
       </div>
+      {strategy && (
+        <div className="mt-3 text-xs text-slate-400">
+          {performance.find((item) => item.strategy_config_id === strategy.id) ? (
+            <span>
+              Latest replay: PF{" "}
+              {performance.find((item) => item.strategy_config_id === strategy.id)?.profit_factor.toFixed(2)} | win{" "}
+              {((performance.find((item) => item.strategy_config_id === strategy.id)?.win_rate ?? 0) * 100).toFixed(1)}%
+              {performance.find((item) => item.strategy_config_id === strategy.id)?.degraded ? (
+                <span className="ml-2 text-red-300">degraded</span>
+              ) : (
+                <span className="ml-2 text-emerald-300">healthy/insufficient sample</span>
+              )}
+            </span>
+          ) : (
+            <span>No replay snapshot yet for this strategy.</span>
+          )}
+        </div>
+      )}
     </header>
   );
 }

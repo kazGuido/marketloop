@@ -50,5 +50,8 @@ The collector/analyzer persist replayable evidence:
 - `orderbook_snapshots`: mid price, 0.2% bid/ask depth, imbalance ratio, and top levels captured when patterns enter PRZ.
 - `asset_context_snapshots`: OI, funding, mark price, and raw Hyperliquid context captured with confluence checks.
 - `strategy_configs`: deterministic weights and gates used to score/fail signals.
+- `strategy_performance_snapshots`: rolling replay/monitor metrics for saved strategies.
+
+Strategies are saved profiles, not just transient UI settings. The active analyzer profile is selected through `/api/strategies/{id}/activate`; every scored pattern stores the strategy id that produced it. The analyzer also runs a strategy monitor loop that replays saved profiles against persisted signal evidence, writes rolling performance snapshots, and sends a Telegram warning when a strategy falls below its configured win-rate/profit-factor/drawdown thresholds.
 
 The default profile is intentionally conservative: fewer tools, higher evidence quality, and explicit cost assumptions. Liquidation-cluster data is not added yet because there is no reliable free Hyperliquid endpoint in this implementation; use OI/funding plus orderflow persistence as the deterministic positioning proxy until a real liquidation feed is available.

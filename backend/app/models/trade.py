@@ -16,6 +16,7 @@ class Trade(Base):
     pattern_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("patterns.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    strategy_config_id: Mapped[int | None] = mapped_column(ForeignKey("strategy_configs.id"), nullable=True, index=True)
     hyperliquid_order_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
     entry_price: Mapped[float] = mapped_column(Float, nullable=False)
     stop_loss: Mapped[float] = mapped_column(Float, nullable=False)

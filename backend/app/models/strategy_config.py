@@ -9,8 +9,10 @@ from app.db.base import Base
 class StrategyConfig(Base):
     __tablename__ = "strategy_configs"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(80), nullable=False, default="rent-and-utilities")
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
 
     score_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=80)
     base_weight: Mapped[int] = mapped_column(Integer, nullable=False, default=25)
@@ -32,6 +34,12 @@ class StrategyConfig(Base):
     fee_bps: Mapped[float] = mapped_column(Float, nullable=False, default=4.5)
     slippage_bps: Mapped[float] = mapped_column(Float, nullable=False, default=3.0)
     require_quality_gates: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    monitor_window_trades: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    min_monitor_trades: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
+    min_win_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.42)
+    min_profit_factor: Mapped[float] = mapped_column(Float, nullable=False, default=1.15)
+    max_drawdown_r: Mapped[float] = mapped_column(Float, nullable=False, default=6.0)
+    notify_on_degradation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
