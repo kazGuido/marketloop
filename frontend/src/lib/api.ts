@@ -1,11 +1,13 @@
 import type { Candle, Pattern, PatternStatus, StrategyConfig, StrategyPerformance, SystemConfig } from "../types/api";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(API_KEY ? { "x-api-key": API_KEY } : {}),
       ...(init?.headers ?? {})
     },
     ...init

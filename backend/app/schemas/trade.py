@@ -10,11 +10,14 @@ class TradeRead(BaseModel):
     id: UUID
     pattern_id: UUID
     strategy_config_id: int | None
+    requested_quantity: float
     entry_price: float
+    average_fill_price: float | None
     stop_loss: float
     take_profit_1: float
     quantity: float
     remaining_quantity: float
+    exchange_position_size: float
     status: TradeStatus
     created_at: datetime
 

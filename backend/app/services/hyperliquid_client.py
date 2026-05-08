@@ -101,8 +101,24 @@ class HyperliquidPrivateClient:
     async def market_close(self, coin: str, size: float | None = None) -> dict[str, Any]:
         return await asyncio.to_thread(self.exchange.market_close, coin.upper(), size)
 
+    async def user_state(self) -> dict[str, Any]:
+        return await asyncio.to_thread(self.info.user_state, self.wallet_address)
+
+    async def open_positions(self) -> dict[str, dict[str, Any]]:
+        state = await self.user_state()
+        positions: dict[str, dict[str, Any]] = {}
+        for position in state.get("assetPositions", []):
+            item = position.get("position", {})
+            coin = item.get("coin")
+            if not coin:
+                continue
+            size = float(item.get("szi", 0) or 0)
+            if size != 0:
+                positions[coin.upper()] = {**item, "signed_size": size, "abs_size": abs(size)}
+        return positions
+
     async def close_all_positions(self) -> list[dict[str, Any]]:
-        state = await asyncio.to_thread(self.info.user_state, self.wallet_address)
+        state = await self.user_state()
         results: list[dict[str, Any]] = []
         for position in state.get("assetPositions", []):
             item = position.get("position", {})

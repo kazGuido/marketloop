@@ -27,6 +27,8 @@ docker compose up --build
 
 The default operation mode is `SIGNAL_ONLY`. The authenticated Hyperliquid SDK is only initialized when the database-backed mode is switched to `AUTO_TRADE`, and then `HYPERLIQUID_WALLET_ADDRESS` plus `HYPERLIQUID_PRIVATE_KEY` must be present.
 
+Set `API_AUTH_TOKEN` and matching frontend `VITE_API_KEY` before exposing the service. When configured, all `/api/*` routes require the `x-api-key` header. Docker backend containers also run `alembic upgrade head` on startup so schema changes are versioned instead of relying on metadata-only table creation.
+
 ## Deterministic pattern rules
 
 - ATR(14) x 1.5 ZigZag deviation confirms pivots before using X/A/B/C.
