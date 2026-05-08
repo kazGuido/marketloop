@@ -1,0 +1,13 @@
+asyncpg
+fastapi
+httpx
+hyperliquid-python-sdk
+numpy
+pandas
+psycopg[binary]
+pydantic-settings
+pyharmonics
+python-dotenv
+redis[hiredis]
+SQLAlchemy
+uvicorn[standard]
