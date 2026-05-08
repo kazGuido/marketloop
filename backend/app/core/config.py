@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Deterministic Harmonic Sentinel"
     environment: Literal["local", "test", "production"] = "local"
+    api_auth_token: str | None = None
 
     database_url: str = "postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel"
     redis_url: str = "redis://redis:6379/0"

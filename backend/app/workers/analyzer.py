@@ -4,13 +4,18 @@ import logging
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.db.init_db import ensure_default_config, ensure_default_strategy_config, init_models
+from app.db.init_db import ensure_default_config, ensure_default_strategy_config
 from app.db.session import AsyncSessionLocal
 from app.models import Pattern, Trade
 from app.models.enums import OperationMode, PatternDirection, PatternStatus, TradeStatus
 from app.services.config_service import get_system_config
 from app.services.confluence import score_pattern
-from app.services.execution import close_trade_loss, close_trade_take_profit, open_trade_for_pattern
+from app.services.execution import (
+    close_trade_loss,
+    close_trade_take_profit,
+    open_trade_for_pattern,
+    reconcile_trade_position,
+)
 from app.services.hyperliquid_client import HyperliquidPrivateClient, HyperliquidPublicClient
 from app.services.market_data import persist_confluence_snapshots
 from app.services.notifications import send_pattern_alert, send_strategy_degradation_alert
@@ -132,6 +137,9 @@ async def risk_manager_loop(client: HyperliquidPublicClient) -> None:
                     .where(Trade.status == TradeStatus.OPEN)
                 )
                 for trade, pattern in result.all():
+                    await reconcile_trade_position(session, private_client, trade, pattern)
+                    if trade.status != TradeStatus.OPEN or trade.remaining_quantity <= 0:
+                        continue
                     price = await _live_price(client, pattern.symbol)
                     x_price = float(pattern.coords["X"]["price"])
                     if _crossed_invalidation(pattern.direction, price, x_price):
@@ -204,7 +212,6 @@ def _hit_take_profit(direction: PatternDirection, price: float, take_profit: flo
 
 
 async def run() -> None:
-    await init_models()
     async with AsyncSessionLocal() as session:
         await ensure_default_config(session)
         await ensure_default_strategy_config(session)

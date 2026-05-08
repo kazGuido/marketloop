@@ -46,6 +46,21 @@ Important fields:
 
 The UI exposes these fields in the header.
 
+### API key security
+
+All `/api/*` routes can be protected with a shared API key:
+
+- backend env: `API_AUTH_TOKEN`
+- frontend env: `VITE_API_KEY`
+
+When `API_AUTH_TOKEN` is set, the backend requires clients to send:
+
+```text
+x-api-key: <token>
+```
+
+`/health`, `/docs`, `/openapi.json`, and CORS preflight requests remain public. This is intentionally simple and VPS-friendly, but production deployments should still place the UI/API behind HTTPS and preferably a VPN, reverse-proxy auth layer, or private network.
+
 ### Notification config
 
 Notification preferences are stored under `system_config.extra.notification_config` and edited from the UI. The backend fans out signal and strategy-degradation alerts to every enabled channel.
@@ -356,11 +371,16 @@ Important fields:
 
 - `pattern_id`
 - `strategy_config_id`
+- `requested_quantity`
 - `entry_price`
+- `average_fill_price`
 - `stop_loss`
 - `take_profit_1`
 - `quantity`
 - `remaining_quantity`
+- `exchange_position_size`
+- `last_reconciled_at`
+- `reconciliation_notes`
 - `status`
 
 ### `market_candles`
@@ -635,12 +655,49 @@ Required environment variables:
 
 This is deliberate: SIGNAL_ONLY mode should not require private keys.
 
-## 13. Safety Design
+### Fill reconciliation
+
+AUTO_TRADE no longer assumes the requested market-order size is the actual position size.
+
+On entry:
+
+1. The requested position size is stored as `requested_quantity`.
+2. The Hyperliquid market-order response is parsed for filled size and average fill price.
+3. `quantity`, `remaining_quantity`, `average_fill_price`, and TP1 are based on the reported fill, not the requested size.
+4. If no fill is reported, the trade is rejected instead of creating a ghost position record.
+
+During every risk-manager cycle:
+
+1. The private client fetches Hyperliquid `user_state`.
+2. Open exchange positions are mapped by coin.
+3. Each open DB trade is reconciled against the actual exchange position.
+4. If exchange size is lower than DB remaining size, DB remaining size is reduced.
+5. If no exchange position exists, the trade is closed in DB and the pattern is invalidated.
+6. Stop-loss and TP close sizes are capped to the reconciled exchange position.
+
+This does not replace a full order/fill event stream, but it materially reduces partial-fill, manual-close, and ghost-dust risk.
+
+## 13. Database Migrations
+
+The backend uses Alembic migrations.
+
+Docker startup runs:
+
+```bash
+alembic upgrade head
+```
+
+through `backend/entrypoint.sh` before starting the API or worker process. The initial migration creates the current SQLAlchemy metadata. Future schema changes should be added as explicit Alembic revisions instead of relying on `Base.metadata.create_all`.
+
+## 14. Safety Design
 
 The system tries to avoid common failure modes:
 
 - no private SDK initialization unless AUTO_TRADE is active,
 - default mode is SIGNAL_ONLY,
+- API key middleware for `/api/*` routes when `API_AUTH_TOKEN` is set,
+- Alembic migration path instead of metadata-only schema creation,
+- trade fill parsing and exchange-position reconciliation,
 - hard invalidation at Point X,
 - PRZ failure invalidation before entry,
 - quality gates in addition to score,
@@ -649,35 +706,31 @@ The system tries to avoid common failure modes:
 - strategy degradation monitoring,
 - kill switch endpoint.
 
-## 14. Current Limitations
+## 15. Current Limitations
 
 Important limitations:
 
-1. No full migration framework yet.
-   - Tables are created with SQLAlchemy metadata at startup.
-   - Production should eventually use Alembic migrations.
-
-2. Replay is candle-based.
+1. Replay is candle-based.
    - It is conservative and deterministic, but not tick-accurate.
 
-3. Liquidation clusters are not implemented.
+2. Liquidation clusters are not implemented.
    - There is no reliable free liquidation-cluster feed wired in.
    - OI/funding plus persistent L2 imbalance are used as deterministic proxies.
 
-4. Harmonic coverage is limited.
+3. Harmonic coverage is limited.
    - Current deterministic logic focuses on Gartley-style X/A/B/C projections.
    - Other harmonic families can be added later.
 
-5. No portfolio-level exposure cap yet.
+4. No portfolio-level exposure cap yet.
    - AUTO_TRADE position sizing uses per-trade risk, but broader portfolio constraints should be added before serious live deployment.
 
-6. No exchange-grade fill reconciliation yet.
-   - Trade state assumes the SDK operation succeeded and does not continuously reconcile all Hyperliquid fills/orders.
+5. Reconciliation is polling-based.
+   - The risk loop reconciles against Hyperliquid user state, but there is not yet a dedicated WebSocket fill/order event journal.
 
-7. No auth on the API/UI yet.
-   - A real VPS deployment should put this behind authentication, a VPN, or a private network.
+6. API auth is shared-key based.
+   - This is much better than unauthenticated VPS ports, but HTTPS, reverse-proxy hardening, and/or VPN access are still recommended.
 
-## 15. Recommended Operating Process
+## 16. Recommended Operating Process
 
 Use this sequence before trusting AUTO_TRADE:
 
