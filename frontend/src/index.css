@@ -55,19 +55,40 @@ button:focus-visible {
 
 @layer components {
   .module-shell {
-    @apply border border-outline-variant bg-surface-container-lowest;
+    border: 1px solid #3b4b3e;
+    background: #0d0e10;
   }
 
   .module-header {
-    @apply border-b border-outline-variant bg-surface-container-low px-module-padding py-sm font-label-caps text-label-caps text-on-surface;
+    border-bottom: 1px solid #3b4b3e;
+    background: #1b1c1e;
+    padding: 8px 12px;
+    color: #e3e2e5;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 12px;
+    text-transform: uppercase;
   }
 
   .label-caps {
-    @apply font-label-caps text-label-caps uppercase text-on-surface-variant;
+    color: #b9cbbb;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 12px;
+    text-transform: uppercase;
   }
 
   .data-value {
-    @apply font-data-mono text-data-mono text-on-surface;
+    color: #e3e2e5;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 18px;
   }
 
   .technical-grid {
