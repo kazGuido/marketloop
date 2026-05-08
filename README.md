@@ -33,7 +33,22 @@ The default operation mode is `SIGNAL_ONLY`. The authenticated Hyperliquid SDK i
   - `D2 = C +/- abs(B - C) * 1.272`
 - PRZ width must be less than 0.5% of current asset price.
 - Confluence score fires at 80+ after candle close confirmation:
-  - Harmonic match: +40
-  - OI dropping: +25
-  - L2 imbalance within 0.2%: +20
-  - RSI divergence: +15
+  - Harmonic match
+  - OI/funding positioning
+  - L2 imbalance within 0.2%
+  - RSI divergence
+  - ATR volatility regime
+  - EMA50/EMA200 trend filter
+  - persistent orderflow imbalance
+  - net reward/risk after fee and slippage assumptions
+
+## Replay/research data
+
+The collector/analyzer persist replayable evidence:
+
+- `market_candles`: OHLCV by symbol/timeframe/open time.
+- `orderbook_snapshots`: mid price, 0.2% bid/ask depth, imbalance ratio, and top levels captured when patterns enter PRZ.
+- `asset_context_snapshots`: OI, funding, mark price, and raw Hyperliquid context captured with confluence checks.
+- `strategy_configs`: deterministic weights and gates used to score/fail signals.
+
+The default profile is intentionally conservative: fewer tools, higher evidence quality, and explicit cost assumptions. Liquidation-cluster data is not added yet because there is no reliable free Hyperliquid endpoint in this implementation; use OI/funding plus orderflow persistence as the deterministic positioning proxy until a real liquidation feed is available.

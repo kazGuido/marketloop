@@ -97,6 +97,65 @@ def rsi(candles: list[Candle], period: int = 14) -> list[float]:
     return values
 
 
+def ema(values: list[float], period: int) -> list[float]:
+    if not values:
+        return []
+    alpha = 2 / (period + 1)
+    output = [values[0]]
+    for value in values[1:]:
+        output.append(value * alpha + output[-1] * (1 - alpha))
+    return output
+
+
+def atr_pct(candles: list[Candle], period: int = 14) -> float:
+    if not candles:
+        return 0
+    values = atr(candles, period)
+    close = candles[-1].close
+    if close <= 0 or not values:
+        return 0
+    return values[-1] / close
+
+
+def avoids_hard_countertrend(candles: list[Candle], direction: PatternDirection) -> bool:
+    """Reject reversals fighting a steep EMA50/EMA200 trend without trying to predict trend tops."""
+    if len(candles) < 80:
+        return False
+    closes = [candle.close for candle in candles]
+    ema50 = ema(closes, 50)
+    ema200 = ema(closes, 200)
+    slope_window = min(10, len(ema50) - 1)
+    if slope_window <= 0 or ema50[-slope_window] == 0:
+        return False
+
+    slope_pct = (ema50[-1] - ema50[-slope_window]) / ema50[-slope_window]
+    close = closes[-1]
+    downtrend_against_long = close < ema200[-1] and ema50[-1] < ema200[-1] and slope_pct < -0.003
+    uptrend_against_short = close > ema200[-1] and ema50[-1] > ema200[-1] and slope_pct > 0.003
+    if direction == PatternDirection.BULLISH:
+        return not downtrend_against_long
+    return not uptrend_against_short
+
+
+def net_reward_risk(
+    coords: dict[str, Any],
+    direction: PatternDirection,
+    entry_price: float,
+    fee_bps: float,
+    slippage_bps: float,
+) -> float:
+    stop = stop_loss_from_x(coords, direction)
+    target = take_profit_1(coords, direction, entry_price)
+    reward = abs(target - entry_price)
+    risk = abs(entry_price - stop)
+    round_trip_cost = entry_price * ((fee_bps + slippage_bps) * 2 / 10_000)
+    net_reward = reward - round_trip_cost
+    net_risk = risk + round_trip_cost
+    if net_risk <= 0:
+        return 0
+    return max(net_reward / net_risk, 0)
+
+
 def zigzag_pivots(candles: list[Candle], atr_multiplier: float = 1.5, atr_period: int = 14) -> list[Pivot]:
     """Confirm pivots only after an ATR-sized retrace to avoid repainting XABC points."""
     if len(candles) < atr_period + 5:

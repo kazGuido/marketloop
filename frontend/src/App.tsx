@@ -4,16 +4,18 @@ import { HarmonicChart } from "./components/HarmonicChart";
 import { Header } from "./components/Header";
 import { SignalSidebar } from "./components/SignalSidebar";
 import { api } from "./lib/api";
-import type { Pattern, SystemConfig } from "./types/api";
+import type { Pattern, StrategyConfig, SystemConfig } from "./types/api";
 
 export default function App() {
   const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [strategy, setStrategy] = useState<StrategyConfig | null>(null);
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch((err) => setError(err.message));
+    api.getStrategy().then(setStrategy).catch((err) => setError(err.message));
   }, []);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <Header config={config} onConfigChange={setConfig} />
+      <Header config={config} strategy={strategy} onConfigChange={setConfig} onStrategyChange={setStrategy} />
       {error && (
         <div className="border-b border-red-900 bg-red-950/70 px-5 py-3 text-sm text-red-100">
           Backend error: {error}

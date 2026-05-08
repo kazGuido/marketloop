@@ -4,7 +4,7 @@ import logging
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.db.init_db import ensure_default_config, init_models
+from app.db.init_db import ensure_default_config, ensure_default_strategy_config, init_models
 from app.db.session import AsyncSessionLocal
 from app.models import Pattern, Trade
 from app.models.enums import OperationMode, PatternDirection, PatternStatus, TradeStatus
@@ -12,6 +12,7 @@ from app.services.config_service import get_system_config
 from app.services.confluence import score_pattern
 from app.services.execution import close_trade_loss, close_trade_take_profit, open_trade_for_pattern
 from app.services.hyperliquid_client import HyperliquidPrivateClient, HyperliquidPublicClient
+from app.services.market_data import persist_confluence_snapshots
 from app.services.pattern_service import pending_patterns, upsert_pending_pattern
 from app.services.redis_cache import redis_cache
 from app.services.technical import (
@@ -20,6 +21,7 @@ from app.services.technical import (
     normalize_candles,
 )
 from app.services.telegram import send_pattern_alert
+from app.services.strategy_service import get_strategy_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("analyzer")
@@ -59,6 +61,7 @@ async def confluence_loop(client: HyperliquidPublicClient) -> None:
         try:
             async with AsyncSessionLocal() as session:
                 config = await get_system_config(session)
+                strategy = await get_strategy_config(session)
                 private_client = HyperliquidPrivateClient() if config.operation_mode == OperationMode.AUTO_TRADE else None
                 for pattern in await pending_patterns(session):
                     live_price = await _live_price(client, pattern.symbol)
@@ -80,12 +83,14 @@ async def confluence_loop(client: HyperliquidPublicClient) -> None:
                         client.l2_book(pattern.symbol),
                         client.asset_context(pattern.symbol),
                     )
-                    confluence = await score_pattern(pattern, live_price, book, context, raw_candles)
+                    confluence = await score_pattern(pattern, live_price, book, context, raw_candles, strategy)
+                    await persist_confluence_snapshots(session, pattern, live_price, book, context, confluence)
                     pattern.confluence_score = confluence.score
+                    pattern.confluence_details = confluence.as_details()
                     await session.commit()
 
                     candles = normalize_candles(raw_candles)
-                    if confluence.score < 80 or not candle_closed_through_prz(
+                    if confluence.score < strategy.score_threshold or not confluence.gates_passed or not candle_closed_through_prz(
                         candles, pattern.prz_lower, pattern.prz_upper, pattern.direction
                     ):
                         continue
@@ -175,6 +180,7 @@ async def run() -> None:
     await init_models()
     async with AsyncSessionLocal() as session:
         await ensure_default_config(session)
+        await ensure_default_strategy_config(session)
     client = HyperliquidPublicClient()
     try:
         await asyncio.gather(scanner_loop(client), confluence_loop(client), risk_manager_loop(client))

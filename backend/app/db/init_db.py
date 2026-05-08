@@ -3,12 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import Base
 from app.db.session import engine
-from app.models import Pattern, SystemConfig, Trade
+from app.models import AssetContextSnapshot, MarketCandle, OrderbookSnapshot, Pattern, StrategyConfig, SystemConfig, Trade
 
 
 async def init_models() -> None:
     # Importing mapped classes above registers all tables with SQLAlchemy metadata.
-    _ = (Pattern, SystemConfig, Trade)
+    _ = (AssetContextSnapshot, MarketCandle, OrderbookSnapshot, Pattern, StrategyConfig, SystemConfig, Trade)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -22,3 +22,14 @@ async def ensure_default_config(session: AsyncSession) -> SystemConfig:
         await session.commit()
         await session.refresh(config)
     return config
+
+
+async def ensure_default_strategy_config(session: AsyncSession) -> StrategyConfig:
+    result = await session.execute(select(StrategyConfig).where(StrategyConfig.id == 1))
+    strategy = result.scalar_one_or_none()
+    if strategy is None:
+        strategy = StrategyConfig(id=1)
+        session.add(strategy)
+        await session.commit()
+        await session.refresh(strategy)
+    return strategy

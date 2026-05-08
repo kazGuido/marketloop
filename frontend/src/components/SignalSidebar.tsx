@@ -38,6 +38,12 @@ export function SignalSidebar({ patterns, selectedPattern, onSelect }: SignalSid
               <span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-300">{pattern.timeframe}</span>
             </div>
             <p className="mt-2 text-sm text-slate-300">{pattern.pattern_type}</p>
+            {pattern.confluence_details?.net_reward_risk !== undefined && (
+              <p className="mt-1 text-xs text-slate-400">
+                Net R:R {pattern.confluence_details.net_reward_risk.toFixed(2)} | ATR{" "}
+                {((pattern.confluence_details.atr_pct ?? 0) * 100).toFixed(2)}%
+              </p>
+            )}
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
               <div
                 className="h-full rounded-full bg-cyan-400"
@@ -45,6 +51,11 @@ export function SignalSidebar({ patterns, selectedPattern, onSelect }: SignalSid
               />
             </div>
             <p className="mt-2 text-xs text-slate-400">Score {pattern.confluence_score}/100</p>
+            {pattern.confluence_details?.reasons?.slice(0, 2).map((reason) => (
+              <p key={reason} className="mt-1 text-xs text-cyan-200">
+                {reason}
+              </p>
+            ))}
           </button>
         ))}
       </div>

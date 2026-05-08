@@ -2,10 +2,11 @@ import asyncio
 import logging
 
 from app.core.config import get_settings
-from app.db.init_db import ensure_default_config, init_models
+from app.db.init_db import ensure_default_config, ensure_default_strategy_config, init_models
 from app.db.session import AsyncSessionLocal
 from app.services.config_service import get_system_config
 from app.services.hyperliquid_client import HyperliquidPublicClient
+from app.services.market_data import persist_candles
 from app.services.redis_cache import redis_cache
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -34,6 +35,8 @@ async def collect_once(client: HyperliquidPublicClient) -> None:
     async def collect_symbol(symbol: str) -> None:
         async with semaphore:
             candles = await client.candles(symbol, settings.default_timeframe)
+            async with AsyncSessionLocal() as session:
+                await persist_candles(session, symbol, settings.default_timeframe, candles)
             await redis_cache.set_json(
                 f"candles:{symbol}:{settings.default_timeframe}",
                 candles,
@@ -49,6 +52,7 @@ async def run() -> None:
     await init_models()
     async with AsyncSessionLocal() as session:
         await ensure_default_config(session)
+        await ensure_default_strategy_config(session)
     client = HyperliquidPublicClient()
     try:
         while True:

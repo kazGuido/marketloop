@@ -26,6 +26,7 @@ class Pattern(Base):
     prz_upper: Mapped[float] = mapped_column(Float, nullable=False)
     prz_lower: Mapped[float] = mapped_column(Float, nullable=False)
     confluence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    confluence_details: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     status: Mapped[PatternStatus] = mapped_column(
         Enum(PatternStatus), nullable=False, default=PatternStatus.PENDING, index=True
     )

@@ -9,6 +9,30 @@ export interface SystemConfig {
   risk_per_trade: number;
 }
 
+export interface StrategyConfig {
+  id: number;
+  name: string;
+  score_threshold: number;
+  base_weight: number;
+  oi_weight: number;
+  orderbook_weight: number;
+  rsi_weight: number;
+  trend_weight: number;
+  volatility_weight: number;
+  funding_weight: number;
+  orderflow_persistence_weight: number;
+  min_atr_pct: number;
+  max_atr_pct: number;
+  min_net_reward_risk: number;
+  max_abs_funding_rate: number;
+  orderbook_imbalance_ratio: number;
+  orderflow_window: number;
+  orderflow_min_confirmations: number;
+  fee_bps: number;
+  slippage_bps: number;
+  require_quality_gates: boolean;
+}
+
 export interface PivotCoord {
   time: number;
   price: number;
@@ -25,6 +49,15 @@ export interface Pattern {
   prz_upper: number;
   prz_lower: number;
   confluence_score: number;
+  confluence_details: {
+    reasons?: string[];
+    reject_reasons?: string[];
+    gates_passed?: boolean;
+    net_reward_risk?: number;
+    atr_pct?: number;
+    imbalance_ratio?: number;
+    funding_rate?: number | null;
+  };
   status: PatternStatus;
   created_at: string;
 }

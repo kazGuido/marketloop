@@ -11,10 +11,12 @@ from app.models import Pattern, Trade
 from app.models.enums import OperationMode, PatternStatus, TradeStatus
 from app.schemas.config import SystemConfigRead, SystemConfigUpdate
 from app.schemas.pattern import CandleRead, PatternRead
+from app.schemas.strategy import StrategyConfigRead, StrategyConfigUpdate
 from app.schemas.trade import TradeRead
 from app.services.config_service import get_system_config, update_system_config
 from app.services.hyperliquid_client import HyperliquidPrivateClient, HyperliquidPublicClient
 from app.services.redis_cache import redis_cache
+from app.services.strategy_service import get_strategy_config, update_strategy_config
 from app.services.technical import normalize_candles
 
 router = APIRouter()
@@ -34,6 +36,16 @@ async def read_config(session: SessionDep):
 @router.put("/api/config", response_model=SystemConfigRead)
 async def write_config(payload: SystemConfigUpdate, session: SessionDep):
     return await update_system_config(session, payload)
+
+
+@router.get("/api/strategy", response_model=StrategyConfigRead)
+async def read_strategy(session: SessionDep):
+    return await get_strategy_config(session)
+
+
+@router.put("/api/strategy", response_model=StrategyConfigRead)
+async def write_strategy(payload: StrategyConfigUpdate, session: SessionDep):
+    return await update_strategy_config(session, payload)
 
 
 @router.get("/api/patterns", response_model=list[PatternRead])

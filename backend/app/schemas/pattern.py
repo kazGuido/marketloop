@@ -17,6 +17,7 @@ class PatternRead(BaseModel):
     prz_upper: float
     prz_lower: float
     confluence_score: int
+    confluence_details: dict[str, Any]
     status: PatternStatus
     created_at: datetime
 
