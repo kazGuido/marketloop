@@ -22,3 +22,7 @@ class SystemConfig(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    @property
+    def notification_config(self) -> dict[str, Any]:
+        return (self.extra or {}).get("notification_config", {})

@@ -7,6 +7,23 @@ export interface SystemConfig {
   operation_mode: OperationMode;
   asset_pool: string[];
   risk_per_trade: number;
+  notification_config: NotificationConfig;
+}
+
+export interface NotificationConfig {
+  telegram_enabled: boolean;
+  telegram_chat_id: string | null;
+  whatsapp_enabled: boolean;
+  whatsapp_recipient: string | null;
+  whatsapp_bridge_url: string | null;
+  email_enabled: boolean;
+  email_to: string | null;
+  email_from: string | null;
+  smtp_host: string | null;
+  smtp_port: number;
+  smtp_username: string | null;
+  smtp_password: string | null;
+  smtp_use_tls: boolean;
 }
 
 export interface StrategyConfig {

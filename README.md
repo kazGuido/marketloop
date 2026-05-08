@@ -11,7 +11,7 @@ For a detailed explanation of the current system, data flow, strategy monitoring
 - **Collector** fetches Hyperliquid candles/mids every minute and writes Redis.
 - **Analyzer** runs deterministic ATR ZigZag pivot detection, Gartley PRZ projection, confluence scoring, execution, and risk loops.
 - **FastAPI API** serves config, patterns, candles, trades, and `/api/panic`.
-- **React/Vite UI** provides signal/auto-trade controls, asset pool settings, kill switch, active signals, and lightweight chart overlays.
+- **React/Vite UI** provides signal/auto-trade controls, asset pool settings, notification channel settings, kill switch, active signals, and lightweight chart overlays.
 
 ## Run locally
 

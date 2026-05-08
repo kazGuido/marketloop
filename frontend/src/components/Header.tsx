@@ -26,6 +26,13 @@ export function Header({
 }: HeaderProps) {
   const [assetPool, setAssetPool] = useState("BTC,ETH,SOL");
   const [risk, setRisk] = useState(1.5);
+  const [telegramEnabled, setTelegramEnabled] = useState(true);
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [whatsappRecipient, setWhatsappRecipient] = useState("");
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [smtpHost, setSmtpHost] = useState("");
   const [strategyName, setStrategyName] = useState("rent-and-utilities");
   const [scoreThreshold, setScoreThreshold] = useState(80);
   const [minRewardRisk, setMinRewardRisk] = useState(1.2);
@@ -37,6 +44,13 @@ export function Header({
     if (config) {
       setAssetPool(config.asset_pool.join(","));
       setRisk(config.risk_per_trade);
+      setTelegramEnabled(config.notification_config.telegram_enabled);
+      setTelegramChatId(config.notification_config.telegram_chat_id ?? "");
+      setWhatsappEnabled(config.notification_config.whatsapp_enabled);
+      setWhatsappRecipient(config.notification_config.whatsapp_recipient ?? "");
+      setEmailEnabled(config.notification_config.email_enabled);
+      setEmailTo(config.notification_config.email_to ?? "");
+      setSmtpHost(config.notification_config.smtp_host ?? "");
     }
   }, [config]);
 
@@ -58,7 +72,17 @@ export function Header({
       const updated = await api.updateConfig({
         operation_mode: nextMode ?? config.operation_mode,
         asset_pool: assets,
-        risk_per_trade: risk
+        risk_per_trade: risk,
+        notification_config: {
+          ...config.notification_config,
+          telegram_enabled: telegramEnabled,
+          telegram_chat_id: telegramChatId || null,
+          whatsapp_enabled: whatsappEnabled,
+          whatsapp_recipient: whatsappRecipient || null,
+          email_enabled: emailEnabled,
+          email_to: emailTo || null,
+          smtp_host: smtpHost || null
+        }
       });
       onConfigChange(updated);
     } finally {
@@ -296,6 +320,68 @@ export function Header({
           ) : (
             <span>No replay snapshot yet for this strategy.</span>
           )}
+        </div>
+      )}
+      {config && (
+        <div className="mt-4 grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300 md:grid-cols-3">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 font-semibold text-white">
+              <input
+                type="checkbox"
+                checked={telegramEnabled}
+                onChange={(event) => setTelegramEnabled(event.target.checked)}
+              />
+              Telegram
+            </label>
+            <input
+              value={telegramChatId}
+              onChange={(event) => setTelegramChatId(event.target.value)}
+              className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+              placeholder="Optional chat id override"
+            />
+            <p className="text-xs text-slate-500">Bot token stays in env; chat id can be overridden here.</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 font-semibold text-white">
+              <input
+                type="checkbox"
+                checked={whatsappEnabled}
+                onChange={(event) => setWhatsappEnabled(event.target.checked)}
+              />
+              WhatsApp / Baileys
+            </label>
+            <input
+              value={whatsappRecipient}
+              onChange={(event) => setWhatsappRecipient(event.target.value)}
+              className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+              placeholder="Phone with country code or JID"
+            />
+            <p className="text-xs text-slate-500">Pair the Baileys bridge once, then send to this recipient.</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 font-semibold text-white">
+              <input
+                type="checkbox"
+                checked={emailEnabled}
+                onChange={(event) => setEmailEnabled(event.target.checked)}
+              />
+              Email
+            </label>
+            <input
+              value={emailTo}
+              onChange={(event) => setEmailTo(event.target.value)}
+              className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+              placeholder="Recipient email"
+            />
+            <input
+              value={smtpHost}
+              onChange={(event) => setSmtpHost(event.target.value)}
+              className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+              placeholder="Optional SMTP host override"
+            />
+          </div>
         </div>
       )}
     </header>

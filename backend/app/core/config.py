@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
 
+    whatsapp_bridge_url: str = "http://whatsapp:3000"
+    whatsapp_bridge_api_key: str | None = None
+
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    smtp_use_tls: bool = True
+
     default_timeframe: str = "15m"
     candle_lookback_minutes: int = 60 * 24 * 7
     collector_interval_seconds: int = 60

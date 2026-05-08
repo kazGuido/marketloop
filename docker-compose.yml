@@ -60,11 +60,22 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
       REDIS_URL: redis://redis:6379/0
+      WHATSAPP_BRIDGE_URL: http://whatsapp:3000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  whatsapp:
+    build: ./whatsapp
+    env_file: .env
+    environment:
+      BAILEYS_AUTH_DIR: /data/auth
+    ports:
+      - "3000:3000"
+    volumes:
+      - whatsapp_auth:/data/auth
 
   frontend:
     build: ./frontend
@@ -77,3 +88,4 @@ services:
 
 volumes:
   postgres_data:
+  whatsapp_auth:

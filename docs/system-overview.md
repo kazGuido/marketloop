@@ -13,7 +13,7 @@ The current design is intentionally conservative. Harmonic geometry is treated a
 
 ## 2. Runtime Architecture
 
-Docker Compose runs six services:
+Docker Compose runs seven services:
 
 | Service | Role |
 | --- | --- |
@@ -22,6 +22,7 @@ Docker Compose runs six services:
 | `collector` | Fetches Hyperliquid public market data and persists replayable candles. |
 | `analyzer` | Runs scanner, confluence, risk, and strategy-monitor loops. |
 | `api` | FastAPI service used by the React UI and external clients. |
+| `whatsapp` | Baileys bridge service for WhatsApp alert delivery. |
 | `frontend` | React/Vite/Tailwind UI with config controls, strategy controls, signals, and chart overlays. |
 
 The system separates collection, analysis, and API serving so the UI does not call Hyperliquid directly and the analysis logic stays backend-only.
@@ -44,6 +45,27 @@ Important fields:
   - percentage of account equity used for AUTO_TRADE position sizing.
 
 The UI exposes these fields in the header.
+
+### Notification config
+
+Notification preferences are stored under `system_config.extra.notification_config` and edited from the UI. The backend fans out signal and strategy-degradation alerts to every enabled channel.
+
+Supported channels:
+
+- Telegram
+  - enable/disable in UI
+  - optional chat id override in UI
+  - bot token should remain in `TELEGRAM_BOT_TOKEN`
+- WhatsApp through Baileys
+  - enable/disable in UI
+  - recipient phone number or WhatsApp JID in UI
+  - sent through the internal `whatsapp` Docker service
+- Email
+  - enable/disable in UI
+  - recipient and optional SMTP host override in UI
+  - SMTP credentials should usually remain in env
+
+Sensitive credentials can be provided through `.env`; non-secret routing toggles and destinations can be managed in the UI.
 
 ### Strategy config
 
@@ -526,6 +548,10 @@ When a pattern is selected:
 
 ## 11. Telegram Notifications
 
+Alerts are multi-channel. The backend builds one deterministic alert payload and delivers it through each enabled channel.
+
+### Telegram
+
 Telegram is optional.
 
 Environment variables:
@@ -539,6 +565,53 @@ Used for:
 - strategy degradation alerts.
 
 If Telegram credentials are absent, notifications are skipped without failing the engine.
+
+### WhatsApp / Baileys
+
+WhatsApp delivery uses the `whatsapp` Docker service. It runs a small Node/Express bridge around Baileys.
+
+Endpoints:
+
+- `GET /health`
+- `GET /status`
+- `POST /send`
+
+The backend calls `POST /send` with:
+
+```json
+{
+  "to": "15551234567",
+  "message": "..."
+}
+```
+
+The Baileys auth state is persisted in the `whatsapp_auth` Docker volume. On first startup, read the WhatsApp service logs or call `/status` to retrieve the pairing QR. After pairing, the same auth volume is reused.
+
+Optional environment variables:
+
+- `BAILEYS_API_KEY`
+  - protects the bridge.
+- `WHATSAPP_BRIDGE_API_KEY`
+  - used by the Python backend when calling the bridge.
+- `WHATSAPP_BRIDGE_URL`
+  - defaults to `http://whatsapp:3000` in Compose.
+
+If the bridge is disconnected or unpaired, WhatsApp delivery is skipped/fails independently of the other channels.
+
+### Email
+
+Email delivery uses SMTP.
+
+Environment variables:
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_FROM_EMAIL`
+- `SMTP_USE_TLS`
+
+The UI can enable email, set the recipient, and optionally override the SMTP host. Credentials should usually stay in environment variables rather than being typed into the UI.
 
 ## 12. Hyperliquid Integration
 

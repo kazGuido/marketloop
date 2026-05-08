@@ -19,6 +19,10 @@ async def update_system_config(session: AsyncSession, payload: SystemConfigUpdat
     config.operation_mode = payload.operation_mode
     config.asset_pool = payload.asset_pool
     config.risk_per_trade = payload.risk_per_trade
+    config.extra = {
+        **(config.extra or {}),
+        "notification_config": payload.notification_config.model_dump(),
+    }
     await session.commit()
     await session.refresh(config)
     return config

@@ -13,6 +13,7 @@ from app.services.confluence import score_pattern
 from app.services.execution import close_trade_loss, close_trade_take_profit, open_trade_for_pattern
 from app.services.hyperliquid_client import HyperliquidPrivateClient, HyperliquidPublicClient
 from app.services.market_data import persist_confluence_snapshots
+from app.services.notifications import send_pattern_alert, send_strategy_degradation_alert
 from app.services.pattern_service import pending_patterns, upsert_pending_pattern
 from app.services.redis_cache import redis_cache
 from app.services.technical import (
@@ -21,7 +22,6 @@ from app.services.technical import (
     normalize_candles,
 )
 from app.services.strategy_performance import persist_strategy_performance
-from app.services.telegram import send_pattern_alert, send_strategy_degradation_alert
 from app.services.strategy_service import get_strategy_config, list_strategy_configs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -98,7 +98,7 @@ async def confluence_loop(client: HyperliquidPublicClient) -> None:
                         continue
 
                     if config.operation_mode == OperationMode.SIGNAL_ONLY:
-                        await send_pattern_alert(pattern, confluence)
+                        await send_pattern_alert(config, pattern, confluence)
                         pattern.status = PatternStatus.ACTIVE
                         await session.commit()
                         logger.info("Signal fired for %s %s score=%s", pattern.symbol, pattern.id, confluence.score)
@@ -151,6 +151,7 @@ async def strategy_monitor_loop() -> None:
     while True:
         try:
             async with AsyncSessionLocal() as session:
+                config = await get_system_config(session)
                 for strategy in await list_strategy_configs(session):
                     snapshot = await persist_strategy_performance(session, strategy)
                     logger.info(
@@ -163,7 +164,7 @@ async def strategy_monitor_loop() -> None:
                     )
                     alert_key = f"strategy_degraded_alert:{strategy.id}:{snapshot.sample_size}:{round(snapshot.expectancy_r, 2)}"
                     if strategy.notify_on_degradation and snapshot.degraded and not await redis_cache.get_json(alert_key):
-                        await send_strategy_degradation_alert(strategy, snapshot)
+                        await send_strategy_degradation_alert(config, strategy, snapshot)
                         await redis_cache.set_json(alert_key, True, ex=60 * 60 * 12)
         except Exception:
             logger.exception("Strategy monitor cycle failed")
