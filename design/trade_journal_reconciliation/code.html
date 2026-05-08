@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Deterministic Harmonic Sentinel - Trade History &amp; Reconciliation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=IBM+Plex+Sans:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #121315; }
+        ::-webkit-scrollbar-thumb { background: #3b4b3e; }
+        .technical-gutter { gap: 1px; }
+        .module-bg { background-color: #0A0B0D; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed-dim": "#ffb4ab",
+                      "on-primary-container": "#00713f",
+                      "inverse-surface": "#e3e2e5",
+                      "on-tertiary-container": "#006b84",
+                      "tertiary": "#f8fcff",
+                      "on-surface-variant": "#b9cbbb",
+                      "surface-container": "#1f2022",
+                      "on-tertiary-fixed": "#001f28",
+                      "on-surface": "#e3e2e5",
+                      "tertiary-container": "#ace8ff",
+                      "inverse-primary": "#006d3c",
+                      "on-secondary-fixed": "#410002",
+                      "on-background": "#e3e2e5",
+                      "on-primary": "#00391d",
+                      "on-tertiary": "#003543",
+                      "on-secondary-fixed-variant": "#93000c",
+                      "surface-bright": "#38393b",
+                      "background": "#121315",
+                      "error-container": "#93000a",
+                      "on-primary-fixed-variant": "#00522c",
+                      "surface-container-low": "#1b1c1e",
+                      "tertiary-fixed": "#b7eaff",
+                      "inverse-on-surface": "#303033",
+                      "surface-container-lowest": "#0d0e10",
+                      "on-secondary-container": "#ffe2de",
+                      "outline": "#849586",
+                      "secondary-container": "#d30017",
+                      "on-secondary": "#690006",
+                      "surface-container-highest": "#343537",
+                      "primary-fixed-dim": "#00e383",
+                      "on-primary-fixed": "#00210e",
+                      "on-tertiary-fixed-variant": "#004e60",
+                      "surface-dim": "#121315",
+                      "primary-fixed": "#5bffa1",
+                      "surface-variant": "#343537",
+                      "surface-container-high": "#292a2c",
+                      "error": "#ffb4ab",
+                      "surface": "#121315",
+                      "primary": "#f2fff1",
+                      "on-error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#4cd6ff",
+                      "secondary": "#ffb4ab",
+                      "primary-container": "#00ff94",
+                      "outline-variant": "#3b4b3e",
+                      "on-error": "#690005",
+                      "surface-tint": "#00e383",
+                      "secondary-fixed": "#ffdad6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "1px",
+                      "module-padding": "12px",
+                      "lg": "24px",
+                      "md": "16px",
+                      "sm": "8px",
+                      "base": "4px",
+                      "xs": "4px",
+                      "xl": "32px"
+              },
+              "fontFamily": {
+                      "h1": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "h2": ["Inter"],
+                      "body-md": ["IBM Plex Sans"],
+                      "body-sm": ["IBM Plex Sans"],
+                      "label-caps": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "h1": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "data-mono": ["13px", {"lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "h2": ["18px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "label-caps": ["10px", {"lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background font-body-md selection:bg-primary-container selection:text-on-primary">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-screen py-md space-y-base bg-surface-container-low border-r border-outline-variant w-64 shrink-0">
+<div class="px-md mb-lg">
+<div class="flex items-center gap-sm mb-xs">
+<span class="material-symbols-outlined text-primary-fixed-dim" data-icon="terminal">terminal</span>
+<span class="text-label-caps font-bold text-on-surface-variant opacity-70">STRATEGY HUB</span>
+</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant opacity-50 px-[2px]">v4.0.1 Harmonic</div>
+</div>
+<nav class="flex-1 space-y-gutter px-xs">
+<div class="text-on-surface-variant flex items-center gap-md px-md py-sm opacity-60 hover:bg-surface-container-high hover:opacity-100 transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="text-label-caps font-label-caps">Terminal</span>
+</div>
+<div class="text-on-surface-variant flex items-center gap-md px-md py-sm opacity-60 hover:bg-surface-container-high hover:opacity-100 transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="dynamic_form">dynamic_form</span>
+<span class="text-label-caps font-label-caps">Signals</span>
+</div>
+<div class="text-on-surface-variant flex items-center gap-md px-md py-sm opacity-60 hover:bg-surface-container-high hover:opacity-100 transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-label-caps font-label-caps">Portfolio</span>
+</div>
+<!-- Active: History -->
+<div class="bg-primary-container/10 text-primary-fixed-dim border-r-2 border-primary-fixed-dim flex items-center gap-md px-md py-sm scale-x-105 origin-left duration-200">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="text-label-caps font-label-caps">History</span>
+</div>
+</nav>
+<div class="px-md mt-auto pt-md border-t border-outline-variant/30">
+<button class="w-full py-sm bg-primary-container text-on-primary-container text-label-caps font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
+                    Deploy Pattern
+                </button>
+</div>
+<div class="mt-md space-y-gutter px-xs">
+<div class="text-on-surface-variant flex items-center gap-md px-md py-sm opacity-60 hover:bg-surface-container-high hover:opacity-100 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="wifi_tethering">wifi_tethering</span>
+<span class="text-label-caps font-label-caps">Connection</span>
+</div>
+<div class="text-on-surface-variant flex items-center gap-md px-md py-sm opacity-60 hover:bg-surface-container-high hover:opacity-100 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="text-label-caps font-label-caps">Docs</span>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden bg-background">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-12 w-full px-lg max-w-full bg-surface border-b border-outline-variant">
+<div class="text-h2 font-h2 font-semibold text-on-surface tracking-tighter">Deterministic Harmonic Sentinel</div>
+<div class="flex items-center gap-lg">
+<div class="hidden md:flex items-center gap-md">
+<span class="text-on-surface-variant font-label-caps hover:bg-surface-container-highest transition-colors cursor-pointer px-sm py-1">Signal Only</span>
+<span class="text-on-surface-variant font-label-caps hover:bg-surface-container-highest transition-colors cursor-pointer px-sm py-1">Auto-Trade</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs text-primary font-label-caps">
+<span class="material-symbols-outlined text-[14px]" data-icon="sensors">sensors</span>
+<span>System: Healthy</span>
+</div>
+<div class="flex gap-sm border-l border-outline-variant pl-md">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="settings">settings</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="account_circle">account_circle</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="flex-1 overflow-y-auto p-gutter bg-outline-variant grid grid-cols-12 technical-gutter">
+<!-- Summary Header Module -->
+<section class="col-span-12 module-bg p-module-padding flex flex-wrap items-center justify-between">
+<div class="flex gap-xl">
+<div class="flex flex-col">
+<span class="text-label-caps text-on-surface-variant opacity-60">NET EXPOSURE</span>
+<span class="font-data-mono text-h1 text-primary-container">$124,502.80</span>
+</div>
+<div class="flex flex-col">
+<span class="text-label-caps text-on-surface-variant opacity-60">DAILY PNL (R)</span>
+<div class="flex items-baseline gap-xs">
+<span class="font-data-mono text-h1 text-primary-container">+4.22R</span>
+<span class="font-data-mono text-body-sm text-on-primary-container/70">($2,110.00)</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-label-caps text-on-surface-variant opacity-60">ACTIVE SIGNALS</span>
+<span class="font-data-mono text-h1 text-tertiary-fixed-dim">08</span>
+</div>
+</div>
+<div class="flex gap-md">
+<div class="bg-surface-container-high px-md py-sm flex items-center gap-sm">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="text-label-caps text-primary-container">ENGINE ONLINE</span>
+</div>
+</div>
+</section>
+<!-- Active Positions Section -->
+<section class="col-span-12 lg:col-span-8 module-bg flex flex-col min-h-[300px]">
+<div class="px-module-padding py-sm border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+<span class="text-label-caps text-on-surface font-bold tracking-widest">ACTIVE HYPERLIQUID POSITIONS</span>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]" data-icon="refresh">refresh</span>
+<span class="text-label-caps text-on-surface-variant">SYNCING...</span>
+</div>
+</div>
+<div class="flex-1 overflow-x-auto">
+<table class="w-full text-left font-data-mono border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant border-b border-outline-variant">
+<th class="px-md py-sm text-label-caps font-bold">SYMBOL</th>
+<th class="px-md py-sm text-label-caps font-bold text-right">ENTRY / FILL</th>
+<th class="px-md py-sm text-label-caps font-bold text-right">SIZE (REC/REQ)</th>
+<th class="px-md py-sm text-label-caps font-bold text-right">SL / TP1</th>
+<th class="px-md py-sm text-label-caps font-bold text-right">UNREALIZED</th>
+<th class="px-md py-sm text-label-caps font-bold">STATUS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-md py-sm text-primary-fixed">ETH-PERP</td>
+<td class="px-md py-sm text-right">
+<div class="text-on-surface">2401.42</div>
+<div class="text-[10px] text-on-surface-variant">2401.45</div>
+</td>
+<td class="px-md py-sm text-right">
+<div class="text-on-surface">42.00 / 42.00</div>
+<div class="text-[10px] text-primary-container">MATCHED</div>
+</td>
+<td class="px-md py-sm text-right">
+<div class="text-secondary-container">2380.00</div>
+<div class="text-primary-container">2450.00</div>
+</td>
+<td class="px-md py-sm text-right text-primary-container">+$124.50</td>
+<td class="px-md py-sm">
+<span class="flex items-center gap-xs text-[10px] font-bold text-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-[14px]" data-icon="sync">sync</span>
+                                            RECONCILING
+                                        </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-md py-sm text-primary-fixed">SOL-PERP</td>
+<td class="px-md py-sm text-right">
+<div class="text-on-surface">112.55</div>
+<div class="text-[10px] text-on-surface-variant">112.58</div>
+</td>
+<td class="px-md py-sm text-right">
+<div class="text-on-surface">150.0 / 150.0</div>
+<div class="text-[10px] text-primary-container">MATCHED</div>
+</td>
+<td class="px-md py-sm text-right">
+<div class="text-secondary-container">108.20</div>
+<div class="text-primary-container">121.00</div>
+</td>
+<td class="px-md py-sm text-right text-secondary-container">-$22.40</td>
+<td class="px-md py-sm">
+<span class="flex items-center gap-xs text-[10px] font-bold text-primary-container">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                                            STABLE
+                                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Detail Panel (Sidebar in Grid) -->
+<section class="col-span-12 lg:col-span-4 module-bg flex flex-col border-l lg:border-l-0 border-outline-variant overflow-hidden">
+<div class="px-module-padding py-sm border-b border-outline-variant bg-surface-container-lowest flex justify-between items-center">
+<span class="text-label-caps text-on-surface font-bold tracking-widest">RECONCILIATION NOTES</span>
+<span class="text-[10px] text-on-surface-variant font-data-mono">ID: HL-88219</span>
+</div>
+<div class="p-module-padding flex-1 overflow-y-auto space-y-md">
+<div class="bg-surface-container-high/50 p-sm border border-outline-variant/30">
+<div class="flex items-center gap-sm text-primary-container mb-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="verified_user">verified_user</span>
+<span class="text-label-caps">AUDIT PASSED</span>
+</div>
+<p class="text-body-sm text-on-surface opacity-80 leading-tight">
+                                Exchange size matched local DB. Partial fill detected at 2024-05-20 14:02:11 UTC. 
+                                Slippage within threshold (0.012%).
+                            </p>
+</div>
+<div class="h-40 relative bg-surface-container-lowest overflow-hidden border border-outline-variant">
+<div class="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,#3b4b3e_1px,transparent_1px)] bg-[length:10px_10px]"></div>
+<!-- Mini Chart Representation -->
+<svg class="absolute inset-0 w-full h-full" viewbox="0 0 400 160">
+<polyline fill="none" points="0,120 40,110 80,115 120,90 160,95 200,60 240,65 280,40 320,50 400,20" stroke="#00ff94" stroke-width="1.5"></polyline>
+<circle cx="120" cy="90" fill="#00ff94" r="3"></circle>
+<text fill="#e3e2e5" font-family="JetBrains Mono" font-size="8" x="125" y="85">ENTRY</text>
+</svg>
+<img class="w-full h-full object-cover mix-blend-overlay opacity-30" data-alt="A highly detailed close-up of a financial terminal screen displaying complex candlestick charts and neon-green technical indicators. The background is a deep, charcoal black, with sharp, precise line work and low-contrast grid patterns. The aesthetic is purely technical and high-performance, reflecting an institutional-grade trading environment with high information density." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDN4BJFhqhPrwWU1QnK59GwmWKfYfX-NFOFhRvtTL_qXEbutgvnlkKCNlnAMhYL5Gd1JRLP4H27dlkzw5zbuCocyvYuY7xw26VMqb2Xo_F3ZOwHNLT4QIdhZ4nfgb3BGLFoEtyNMybw7kPCnnr6hbASfRHj0HVI2dvC0kPx8eJpZ-C8DsZ3Xe7ju5NQiC7E2yVxsXWkPjLnrJr0Q5J8pRFPUyfy13x_XrSiA8q9qTbgxez8KdFWWsvGagY8f2TxJLjcCi4vR7vv0w"/>
+</div>
+<div class="space-y-xs">
+<div class="flex justify-between text-[11px] font-data-mono py-1 border-b border-outline-variant/20">
+<span class="text-on-surface-variant">EXCHANGE ID</span>
+<span class="text-on-surface">H-11029-33</span>
+</div>
+<div class="flex justify-between text-[11px] font-data-mono py-1 border-b border-outline-variant/20">
+<span class="text-on-surface-variant">NETWORK FEE</span>
+<span class="text-on-surface">0.00012 ETH</span>
+</div>
+<div class="flex justify-between text-[11px] font-data-mono py-1">
+<span class="text-on-surface-variant">LATENCY</span>
+<span class="text-primary-container">42ms</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Historical Trade Journal -->
+<section class="col-span-12 module-bg flex flex-col">
+<div class="px-module-padding py-sm border-b border-outline-variant bg-surface-container-lowest flex justify-between items-center">
+<span class="text-label-caps text-on-surface font-bold tracking-widest">HISTORICAL TRADE JOURNAL</span>
+<div class="flex gap-sm">
+<div class="bg-surface-container-high px-sm py-1 border border-outline-variant flex items-center gap-xs cursor-pointer">
+<span class="material-symbols-outlined text-[14px]" data-icon="filter_list">filter_list</span>
+<span class="text-label-caps">FILTER</span>
+</div>
+<div class="bg-surface-container-high px-sm py-1 border border-outline-variant flex items-center gap-xs cursor-pointer">
+<span class="material-symbols-outlined text-[14px]" data-icon="download">download</span>
+<span class="text-label-caps">EXPORT CSV</span>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto overflow-y-hidden">
+<table class="w-full text-left font-data-mono border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant border-b border-outline-variant">
+<th class="px-md py-xs text-label-caps">TIMESTAMP</th>
+<th class="px-md py-xs text-label-caps">SYMBOL</th>
+<th class="px-md py-xs text-label-caps">DIR</th>
+<th class="px-md py-xs text-label-caps">STRATEGY</th>
+<th class="px-md py-xs text-label-caps">FILL QUALITY</th>
+<th class="px-md py-xs text-label-caps">OUTCOME</th>
+<th class="px-md py-xs text-label-caps text-right">NET PNL (R)</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-md py-2 text-on-surface-variant text-[12px]">2024-05-20 12:00:04</td>
+<td class="px-md py-2 text-primary-fixed">BTC-PERP</td>
+<td class="px-md py-2 text-primary-container">LONG</td>
+<td class="px-md py-2 text-on-surface text-[12px]">Harmonic_v4_A</td>
+<td class="px-md py-2">
+<div class="w-16 h-1 bg-surface-container-highest relative">
+<div class="absolute left-0 top-0 h-full bg-primary-container w-[95%]"></div>
+</div>
+</td>
+<td class="px-md py-2">
+<span class="bg-primary-container/10 text-primary-container px-sm py-[2px] text-[10px] font-bold border border-primary-container/20 uppercase">TP Hit</span>
+</td>
+<td class="px-md py-2 text-right text-primary-container font-bold">+2.15R</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-md py-2 text-on-surface-variant text-[12px]">2024-05-20 10:15:22</td>
+<td class="px-md py-2 text-primary-fixed">ARB-PERP</td>
+<td class="px-md py-2 text-secondary-container">SHORT</td>
+<td class="px-md py-2 text-on-surface text-[12px]">MeanRev_Sentinel</td>
+<td class="px-md py-2">
+<div class="w-16 h-1 bg-surface-container-highest relative">
+<div class="absolute left-0 top-0 h-full bg-secondary-container w-[60%]"></div>
+</div>
+</td>
+<td class="px-md py-2">
+<span class="bg-secondary-container/10 text-secondary-container px-sm py-[2px] text-[10px] font-bold border border-secondary-container/20 uppercase">Stop Hit</span>
+</td>
+<td class="px-md py-2 text-right text-secondary-container font-bold">-1.00R</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-md py-2 text-on-surface-variant text-[12px]">2024-05-19 23:44:01</td>
+<td class="px-md py-2 text-primary-fixed">LINK-PERP</td>
+<td class="px-md py-2 text-primary-container">LONG</td>
+<td class="px-md py-2 text-on-surface text-[12px]">Harmonic_v4_C</td>
+<td class="px-md py-2">
+<div class="w-16 h-1 bg-surface-container-highest relative">
+<div class="absolute left-0 top-0 h-full bg-primary-container w-[98%]"></div>
+</div>
+</td>
+<td class="px-md py-2">
+<span class="bg-on-surface-variant/10 text-on-surface-variant px-sm py-[2px] text-[10px] font-bold border border-on-surface-variant/20 uppercase">Panic Closed</span>
+</td>
+<td class="px-md py-2 text-right text-on-surface-variant font-bold">+0.12R</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-md py-2 text-on-surface-variant text-[12px]">2024-05-19 18:02:11</td>
+<td class="px-md py-2 text-primary-fixed">ETH-PERP</td>
+<td class="px-md py-2 text-primary-container">LONG</td>
+<td class="px-md py-2 text-on-surface text-[12px]">Scalp_Flow_B</td>
+<td class="px-md py-2">
+<div class="w-16 h-1 bg-surface-container-highest relative">
+<div class="absolute left-0 top-0 h-full bg-primary-container w-[92%]"></div>
+</div>
+</td>
+<td class="px-md py-2">
+<span class="bg-primary-container/10 text-primary-container px-sm py-[2px] text-[10px] font-bold border border-primary-container/20 uppercase">TP Hit</span>
+</td>
+<td class="px-md py-2 text-right text-primary-container font-bold">+3.07R</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Global Footer Status Bar -->
+<footer class="h-8 bg-surface-container-low border-t border-outline-variant flex items-center justify-between px-md shrink-0">
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="text-[10px] font-data-mono text-on-surface-variant">HYPERLIQUID: CONNECTED</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="text-[10px] font-data-mono text-on-surface-variant">DB RECONCILER: ACTIVE</span>
+</div>
+</div>
+<div class="text-[10px] font-data-mono text-on-surface-variant opacity-50 uppercase tracking-tighter">
+                    Last sync: 2024-05-20 14:32:01 UTC | API Latency: 12ms
+                </div>
+</footer>
+</main>
+</div>
+</body></html>
