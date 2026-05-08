@@ -66,6 +66,10 @@ async def confluence_loop(client: HyperliquidPublicClient) -> None:
                         pattern.status = PatternStatus.INVALIDATED
                         await session.commit()
                         continue
+                    if _crossed_prz_failure(pattern, live_price):
+                        pattern.status = PatternStatus.INVALIDATED
+                        await session.commit()
+                        continue
                     if not pattern.prz_lower <= live_price <= pattern.prz_upper:
                         continue
 
@@ -147,6 +151,12 @@ async def _live_price(client: HyperliquidPublicClient, symbol: str) -> float:
 def _hard_invalidated_pending(pattern: Pattern, price: float) -> bool:
     x_price = float(pattern.coords["X"]["price"])
     return _crossed_invalidation(pattern.direction, price, x_price)
+
+
+def _crossed_prz_failure(pattern: Pattern, price: float) -> bool:
+    if pattern.direction == PatternDirection.BULLISH:
+        return price < pattern.prz_lower
+    return price > pattern.prz_upper
 
 
 def _crossed_invalidation(direction: PatternDirection, price: float, x_price: float) -> bool:
