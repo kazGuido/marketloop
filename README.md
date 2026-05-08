@@ -2,6 +2,8 @@
 
 Single-VPS Hyperliquid harmonic pattern scanner and alerting/trading engine.
 
+For a detailed explanation of the current system, data flow, strategy monitoring, replay behavior, and limitations, see [`docs/system-overview.md`](docs/system-overview.md).
+
 ## Architecture
 
 - **PostgreSQL** stores dynamic system configuration, detected patterns, and trades.
